@@ -1,0 +1,6 @@
+{
+  "name": "CricPulse by Khelbo Warriors",
+  "description": "Professional cricket scoring and tournament management ecosystem with real-time live updates, advanced NRR calculation, and comprehensive player statistics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Real-time Data", "Advanced Analytics", "Tournament Management"]
+}

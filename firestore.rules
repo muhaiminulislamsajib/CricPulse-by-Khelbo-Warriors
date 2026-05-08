@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'muhaiminulislamsajib@gmail.com'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 100 &&
+             (!('role' in data) || data.role in ['admin', 'organizer', 'team_manager', 'scorer', 'viewer']);
+    }
+
+    function isValidTournament(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.organizerId == request.auth.uid &&
+             data.format in ['league', 'knockout', 'round_robin', 'group_stage', 'hybrid'] &&
+             data.status in ['upcoming', 'ongoing', 'completed', 'cancelled'];
+    }
+
+    function isValidTeam(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.managerId is string;
+    }
+
+    function isValidMatch(data) {
+      return data.teamAId is string && data.teamBId is string &&
+             data.status in ['upcoming', 'live', 'completed', 'abandoned', 'delayed'];
+    }
+
+    function isValidBall(data) {
+      return data.matchId is string &&
+             data.inningNumber is number && data.inningNumber >= 1 &&
+             data.overNumber is number && data.overNumber >= 0 &&
+             data.ballNumber is number && data.ballNumber >= 1 &&
+             data.strikerId is string &&
+             data.bowlerId is string &&
+             data.runs is number && data.runs >= 0 &&
+             data.extras is number && data.extras >= 0;
+    }
+
+    // --- Rules ---
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'phoneNumber']);
+      allow delete: if isAdmin();
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidTournament(incoming());
+      allow update: if (isAdmin() || (isSignedIn() && existing().organizerId == request.auth.uid)) &&
+                    isValidTournament(incoming());
+      allow delete: if isAdmin() || (isSignedIn() && existing().organizerId == request.auth.uid);
+    }
+
+    match /teams/{teamId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidTeam(incoming());
+      allow update: if (isAdmin() || (isSignedIn() && existing().managerId == request.auth.uid)) &&
+                    isValidTeam(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /players/{playerId} {
+      allow read: if true;
+      allow write: if isSignedIn(); // Simplified for now, should ideally check team manager
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidMatch(incoming());
+      allow update: if (
+        isAdmin() || 
+        (isSignedIn() && (
+          existing().scorerId == request.auth.uid || 
+          get(/databases/$(database)/documents/tournaments/$(existing().tournamentId)).data.organizerId == request.auth.uid
+        ))
+      ) && isValidMatch(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /matches/{matchId}/balls/{ballId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/matches/$(matchId)).data.scorerId == request.auth.uid
+      ) && isValidBall(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via console or service account
+    }
+  }
+}

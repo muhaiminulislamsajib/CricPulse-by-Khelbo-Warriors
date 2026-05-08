@@ -1,0 +1,156 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "organizer", "team_manager", "scorer", "viewer"] },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Tournament": {
+      "title": "Tournament",
+      "description": "Cricket tournament details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "logo": { "type": "string" },
+        "banner": { "type": "string" },
+        "format": { "type": "string", "enum": ["league", "knockout", "round_robin", "group_stage", "hybrid"] },
+        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed", "cancelled"] },
+        "organizerId": { "type": "string" },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "overs": { "type": "number" },
+            "ballsPerOver": { "type": "number" },
+            "wickets": { "type": "number" },
+            "noBallType": { "type": "string", "enum": ["reball_run", "run_only"] },
+            "lastManStanding": { "type": "boolean" },
+            "boundaryTracking": { "type": "boolean" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "format", "organizerId", "status"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "Cricket team details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "banner": { "type": "string" },
+        "managerId": { "type": "string" },
+        "location": { "type": "string" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "matchesPlayed": { "type": "number" },
+            "wins": { "type": "number" },
+            "losses": { "type": "number" },
+            "ties": { "type": "number" },
+            "nrr": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "managerId"]
+    },
+    "Player": {
+      "title": "Player",
+      "description": "Player details within a team",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "teamId": { "type": "string" },
+        "battingStyle": { "type": "string" },
+        "bowlingStyle": { "type": "string" },
+        "jerseyNumber": { "type": "string" },
+        "isCaptain": { "type": "boolean" },
+        "isWicketkeeper": { "type": "boolean" },
+        "role": { "type": "string" },
+        "stats": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "teamId"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "Cricket match details",
+      "type": "object",
+      "properties": {
+        "tournamentId": { "type": "string" },
+        "teamAId": { "type": "string" },
+        "teamBId": { "type": "string" },
+        "status": { "type": "string", "enum": ["upcoming", "live", "completed", "abandoned", "delayed"] },
+        "format": { "type": "string" },
+        "overs": { "type": "number" },
+        "venue": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "scorerId": { "type": "string" },
+        "winnerId": { "type": "string" },
+        "resultNote": { "type": "string" },
+        "liveData": {
+          "type": "object",
+          "properties": {
+            "currentInning": { "type": "number" },
+            "score": { "type": "object" },
+            "strikerId": { "type": "string" },
+            "nonStrikerId": { "type": "string" },
+            "bowlerId": { "type": "string" },
+            "target": { "type": "number" }
+          }
+        },
+        "settings": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teamAId", "teamBId", "status"]
+    },
+    "Ball": {
+      "title": "Ball",
+      "description": "Individual ball data for a match",
+      "type": "object",
+      "properties": {
+        "matchId": { "type": "string" },
+        "inningNumber": { "type": "number" },
+        "overNumber": { "type": "number" },
+        "ballNumber": { "type": "number" },
+        "strikerId": { "type": "string" },
+        "nonStrikerId": { "type": "string" },
+        "bowlerId": { "type": "string" },
+        "runs": { "type": "number" },
+        "extras": { "type": "number" },
+        "extrasType": { "type": "string", "enum": ["none", "wide", "noball", "bye", "legbye", "penalty"] },
+        "isWicket": { "type": "boolean" },
+        "wicketDetail": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "outPlayerId": { "type": "string" },
+            "fielderId": { "type": "string" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["matchId", "inningNumber", "overNumber", "ballNumber", "strikerId", "bowlerId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/tournaments/{tournamentId}": { "schema": "Tournament", "description": "Tournaments list" },
+    "/teams/{teamId}": { "schema": "Team", "description": "Teams list" },
+    "/players/{playerId}": { "schema": "Player", "description": "Players across all teams" },
+    "/matches/{matchId}": { "schema": "Match", "description": "Matches list" },
+    "/matches/{matchId}/balls/{ballId}": { "schema": "Ball", "description": "Ball-by-ball data for a match" }
+  }
+}
